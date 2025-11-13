@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>กำลังโหลดระบบแอดมิน…</title>
+
+<style>
+  body{
+    margin:0; display:flex; justify-content:center; align-items:center;
+    height:100vh; 
+    background:url('Backgroundธีม.png') center/cover no-repeat fixed;
+    font-family:'Kanit',system-ui;
+  }
+  .box{
+    text-align:center; 
+    background:rgba(255,255,255,0.92);
+    -webkit-backdrop-filter:blur(12px);
+    backdrop-filter:blur(12px);
+    padding:28px 24px;
+    border-radius:18px; 
+    width:300px; 
+    box-shadow:0 12px 28px rgba(0,0,0,.20);
+    border:1px solid rgba(255,255,255,.7);
+  }
+  .logo{
+    width:90px; height:90px; border-radius:20px; object-fit:cover;
+    box-shadow:0 5px 18px rgba(0,0,0,.20);
+  }
+  .bar{
+    width:100%; height:7px; background:#e5e7eb; border-radius:999px;
+    margin-top:14px; overflow:hidden;
+  }
+  .prog{
+    height:100%; width:0%; background:#2e7d32; border-radius:999px;
+    animation:fill 1.4s forwards;
+  }
+  @keyframes fill { to { width:100% } }
+
+  #fallback{
+    margin-top:14px; display:none; padding:8px 12px;
+    background:#2e7d32; color:white; border-radius:8px; text-decoration:none;
+    font-weight:700;
+    box-shadow:0 3px 10px rgba(0,0,0,.20);
+    display:inline-block;
+  }
+</style>
+</head>
+
+<body>
+  <div class="box">
+    <img src="logo.png" class="logo">
+    <div style="margin-top:10px; font-size:15px;">กำลังโหลดระบบแอดมิน…</div>
+
+    <div class="bar"><div class="prog"></div></div>
+
+    <a id="fallback" href="admin.html">ไปหน้าแอดมิน</a>
+  </div>
+
+<script>
+  // ✅ เด้งไปหน้า admin อัตโนมัติ
+  setTimeout(()=>location.href='admin.html',1400);
+
+  // ✅ เผื่อบางเครื่อง redirect ไม่ได้ → โชว์ปุ่ม
+  setTimeout(()=>{
+    document.getElementById('fallback').style.display="inline-block";
+  }, 2200);
+</script>
+
+</body>
+</html>

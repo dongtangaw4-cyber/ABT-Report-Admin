@@ -1,0 +1,13 @@
+{
+  "name": "ABT Report – Admin",
+  "short_name": "ABT Admin",
+  "start_url": "./index-admin.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#16a34a",
+  "icons": [
+    { "src": "iconadmin192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "iconadmin512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
