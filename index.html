@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>ระบบผู้ดูแล | ABT Report</title>
+<link rel="manifest" href="./manifest.admin.json">
+
+<!-- favicon บนแท็บเบราว์เซอร์ -->
+<link rel="icon" type="image/png" sizes="32x32"  href="icon_admin_v2_192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon_admin_v2_512.png">
+
+<!-- ไอคอนเมื่อติดตั้งบนมือถือ -->
+<link rel="apple-touch-icon" href="icon_admin_v2_192.png">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="icon_admin_v2_192.png">
+<link rel="apple-touch-icon" href="icon_admin_v2_512.png">
+
+<style>
+  :root{ --card-w:1100px; --border:#e5e7eb }
+
+  html,body{height:100%}
+  body{ margin:0; font-family:Kanit,system-ui; background:url('Backgroundธีม.png') center/cover no-repeat fixed }
+
+  .card{ width:min(var(--card-w),94vw); margin:32px auto; background:#fff; border-radius:16px; box-shadow:0 12px 40px rgba(0,0,0,.12); padding:18px; position:relative }
+  h1{margin:6px 0 16px}
+
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px}
+  .toolbar input,.toolbar select{padding:10px;border:1px solid var(--border);border-radius:10px;font-family:inherit}
+  .btn{padding:10px 14px;border:0;border-radius:10px;font-weight:700;cursor:pointer}
+  .btn-refresh{background:#16a34a;color:#fff}
+  .btn-logout{background:#ef4444;color:#fff}
+  .btn-dash{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#2563eb,#0ea5e9);color:#fff;box-shadow:0 6px 18px rgba(14,165,233,.35)}
+  .btn-dash svg{width:18px;height:18px}
+
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:10px;border-bottom:1px solid #eee;font-size:14px;vertical-align:top}
+  th{background:#f3f4f6;text-align:left;position:sticky;top:0}
+  .thumb{width:64px;height:64px;object-fit:cover;border-radius:8px}
+
+  .pill{padding:4px 10px;border-radius:999px;font-size:12px;display:inline-block}
+  .s-รับเรื่องแล้ว{background:#e0f2fe;color:#0369a1}
+  .s-กำลังดำเนินการ{background:#fef9c3;color:#854d0e}
+  .s-เสร็จสิ้น{background:#dcfce7;color:#166534}
+  .muted{color:#777}
+
+  /* ปุ่มจัดการ */
+  .stack{display:flex;flex-direction:column;gap:6px}
+  .btn-lite{background:#e5e7eb;color:#111}
+  .btn-blue{background:#0ea5e9;color:#fff}
+  .btn-green{background:#16a34a;color:#fff}
+
+  /* รูปก่อน/หลัง */
+  .photo-cell{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .ph{position:relative;display:inline-block}
+  .ph .tag{position:absolute;left:6px;bottom:6px;font-size:11px;line-height:1;padding:4px 6px;border-radius:8px;color:#fff;background:rgba(0,0,0,.5);backdrop-filter:blur(4px)}
+
+  /* ===== PIN Gate ===== */
+  .gate-wrap{position:fixed; inset:0; display:grid; place-items:center; z-index:9999; background:rgba(0,0,0,.15)}
+  .glass{background:rgba(255,255,255,.78); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); border-radius:16px; box-shadow:0 20px 50px rgba(0,0,0,.25); padding:22px; width:min(500px,92vw); text-align:center}
+  .logo-row{display:flex; justify-content:center; align-items:center; gap:18px; margin-bottom:10px}
+  .logo-row img{width:100px; height:100px; object-fit:contain; border-radius:50%; background:#fff}
+  .gate-title{ margin:6px 0 10px; font-weight:700; font-size:22px }
+  .gate-hint{ color:#6b7280; font-size:13px; margin-top:10px }
+  .pin-input{ width:100%; max-width:420px; font-size:18px; padding:10px 12px; border:2px solid #16a34a; border-radius:12px; outline:none; margin:0 auto 10px; display:block }
+  .pin-btn{ width:160px; padding:10px; border:0; border-radius:10px; background:#16a34a; color:#fff; font-weight:700; cursor:pointer }
+
+  /* ===== Dashboard Modal ===== */
+  .dash-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.25); display:none; align-items:flex-start; justify-content:center; overflow:auto; z-index:5000 }
+  .dash-panel{ width:min(1100px,95vw); margin:30px auto; background:#fff; border-radius:16px; padding:18px; box-shadow:0 18px 48px rgba(0,0,0,.25) }
+  .grid{display:grid; gap:14px}
+  @media(min-width:760px){ .g-4{grid-template-columns:repeat(4,1fr)} .g-2{grid-template-columns:repeat(2,1fr)} }
+  .kpi .t{font-size:13px;color:#6b7280} .kpi .n{font-size:30px;font-weight:700;margin:2px 0}
+  table.slim{width:100%;border-collapse:separate;border-spacing:0 8px}
+  table.slim thead th{font-size:13px;color:#6b7280;text-align:left;padding:0 8px}
+  table.slim tbody tr{background:#fff;border:1px solid #e5e7eb;border-radius:12px}
+  table.slim tbody td{padding:10px 8px;font-size:14px}
+  table.slim tbody tr td:first-child{border-top-left-radius:12px;border-bottom-left-radius:12px}
+  table.slim tbody tr td:last-child{border-top-right-radius:12px;border-bottom-right-radius:12px}
+
+  /* มือถือ: แปลงตารางเป็นการ์ด */
+  @media (max-width: 768px){
+    table, thead, tfoot { display:block; }
+    thead { display:none; }
+    tbody tr{ display:block; margin:12px 0; padding:12px; background:#fff; border:1px solid #e5e7eb; border-radius:12px; }
+    tbody td{ display:flex; gap:10px; justify-content:space-between; align-items:flex-start; padding:8px 4px; border-bottom:0; }
+    tbody td::before{ content:attr(data-label); flex:0 0 42%; font-weight:700; color:#64748b; }
+    .thumb{ width:100%; max-width:160px; height:auto; border-radius:8px; }
+    .right{ text-align:left; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ========== PIN Gate ========== -->
+<div id="gate" class="gate-wrap">
+  <div class="glass">
+    <div class="logo-row">
+      <img src="logo.png" alt="โลโก้ซ้าย">
+      <img src="icon.png" alt="โลโก้ขวา">
+    </div>
+    <div class="gate-title">เข้าสู่ระบบผู้ดูแล / ADMIN</div>
+    <form id="pinForm" autocomplete="off">
+      <input id="pin" class="pin-input" type="password" inputmode="numeric" pattern="[0-9]*" placeholder="กรอกรหัสผ่านสำหรับผู้ดูแลระบบ">
+      <button class="pin-btn" type="submit">เข้าสู่ระบบ</button>
+    </form>
+    <div class="gate-hint">* สำหรับเจ้าหน้าที่เท่านั้น</div>
+  </div>
+</div>
+
+<!-- ========== App ========== -->
+<main id="app" style="display:none">
+  <div class="card">
+    <h1>ระบบผู้ดูแล – ศูนย์รับแจ้งปัญหา อบต.ดงตะงาว</h1>
+
+    <div class="toolbar">
+      <input id="q" placeholder="ค้นหา: ชื่อ/ประเภท/รายละเอียด">
+      <select id="status">
+        <option value="">ทั้งหมด (ทุกสถานะ)</option>
+        <option>รับเรื่องแล้ว</option>
+        <option>กำลังดำเนินการ</option>
+        <option>เสร็จสิ้น</option>
+      </select>
+
+      <button id="btnRefresh" class="btn btn-refresh" type="button">รีเฟรช</button>
+      <button id="btnLogout"  class="btn btn-logout"  type="button">ออกจากระบบ</button>
+      <button id="btnDash"    class="btn btn-dash"    type="button" title="แดชบอร์ด">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 19h16a1 1 0 0 0 0-2H4a1 1 0 1 0 0 2Zm2-4h3a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1H6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1Zm7 0h3a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1Z"/></svg>
+        แดชบอร์ด
+      </button>
+      <span id="err" class="muted"></span>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:150px">เวลา</th>
+          <th style="width:160px">ผู้แจ้ง/ที่อยู่</th>
+          <th>ประเภท/รายละเอียด</th>
+          <th style="width:160px">รูป (ก่อน/หลัง)</th>
+          <th style="width:140px">พิกัด</th>
+          <th style="width:120px">สถานะ</th>
+          <th style="width:170px">จัดการ</th>
+        </tr>
+      </thead>
+      <tbody id="rows"><tr><td colspan="7" class="muted">กำลังโหลด…</td></tr></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- ========== Dashboard ========== -->
+<section id="dash" class="dash-backdrop" aria-hidden="true">
+  <div class="dash-panel">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <h2 style="margin:6px 0">ABT Report • Dashboard</h2>
+      <button id="closeDash" class="btn" style="background:#e5e7eb">ปิด</button>
+    </div>
+
+    <div class="grid g-4">
+      <div class="kpi"><div class="t">ทั้งหมด</div><div id="kTotal" class="n">0</div></div>
+      <div class="kpi"><div class="t">รับเรื่องแล้ว</div><div id="kPending" class="n">0</div></div>
+      <div class="kpi"><div class="t">กำลังดำเนินการ</div><div id="kProgress" class="n">0</div></div>
+      <div class="kpi"><div class="t">เสร็จสิ้น</div><div id="kDone" class="n">0</div></div>
+    </div>
+
+    <div class="grid g-2" style="margin-top:12px">
+      <div>
+        <div class="t">สรุปตามสถานะ</div>
+        <canvas id="statusChart" height="160"></canvas>
+      </div>
+      <div>
+        <div class="t">สรุปตามประเภท</div>
+        <canvas id="categoryChart" height="160"></canvas>
+      </div>
+    </div>
+
+    <div style="margin-top:14px">
+      <div class="t">รายการล่าสุด (5 รายการ)</div>
+      <table class="slim">
+        <thead><tr><th>หัวข้อ</th><th>ประเภท</th><th>สถานะ</th><th>วันที่</th></tr></thead>
+        <tbody id="latestRows"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script type="module">
+  /* ================== CONFIG ================== */
+  const ADMIN_PIN = '681103';              // <— เปลี่ยนรหัสที่นี่
+  const KEY = 'abt_admin_login_ok';
+
+  // Cloudinary (Unsigned)
+  const CLOUD_NAME    = 'dm7cggzov';       // <— เปลี่ยนชื่อ cloud ถ้ามีของจริง
+  const UPLOAD_PRESET = 'abt_admin';       // <— เปลี่ยน preset ให้ตรง
+
+  /* ================== ELEMENTS ================== */
+  const gate = document.getElementById('gate');
+  const pinForm = document.getElementById('pinForm');
+  const elPin   = document.getElementById('pin');
+  const app     = document.getElementById('app');
+
+  const dashBackdrop = document.getElementById('dash');
+  const btnDash   = document.getElementById('btnDash');
+  const closeDash = document.getElementById('closeDash');
+
+  const elQ = document.getElementById('q');
+  const elStatus = document.getElementById('status'); 
+  const elRefresh = document.getElementById('btnRefresh');
+  const elRows = document.getElementById('rows');
+
+  const $ = id => document.getElementById(id);
+  const kTotal = $("kTotal"), kPending=$("kPending"), kProgress=$("kProgress"), kDone=$("kDone");
+  const latestRows = $("latestRows");
+  let statusChart, categoryChart;
+
+  let cache = [];
+  let unsubscribe = null;
+
+  function bodyLock(lock){ document.documentElement.style.overflow = lock?'hidden':'' }
+  function showGate(){ gate.style.display='grid'; app.style.display='none'; elPin.value=''; bodyLock(true); setTimeout(()=>elPin.focus(),0) }
+  function showApp(){ gate.style.display='none'; app.style.display=''; bodyLock(false) }
+
+  const fmtTime = ts => {
+    if (!ts) return '-';
+    const d = ts?.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleString('th-TH',{year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+  };
+
+  /* ========== RENDER TABLE ========== */
+  function buildPhotoCell(r){
+    const parts = [];
+    if (r.photo){
+      parts.push(
+        '<a class="ph" href="'+r.photo+'" target="_blank" rel="noopener">' +
+          '<img class="thumb" src="'+r.photo+'" alt="ก่อน"><span class="tag">ก่อน</span>' +
+        '</a>'
+      );
+    } else {
+      parts.push('<div class="thumb" style="display:flex;align-items:center;justify-content:center;background:#f3f4f6;color:#9ca3af">ไม่มีรูป</div>');
+    }
+    if (r.photoAfter){
+      parts.push(
+        '<a class="ph" href="'+r.photoAfter+'" target="_blank" rel="noopener">' +
+          '<img class="thumb" src="'+r.photoAfter+'" alt="หลัง"><span class="tag">หลัง</span>' +
+        '</a>'
+      );
+    }
+    return '<div class="photo-cell">'+parts.join('')+'</div>';
+  }
+
+  function renderTable(){
+    const kw = (elQ?.value||'').trim().toLowerCase();
+    const st = (elStatus?.value||'').trim();
+    const rows = cache.filter(r=>{
+      const blob = `${r.name||''} ${r.category||''} ${r.detail||''}`.toLowerCase();
+      return (!kw || blob.includes(kw)) && (!st || r.status===st);
+    }).map(r=>{
+      return [
+        '<tr>',
+          '<td>'+fmtTime(r.createdAt)+'</td>',
+          '<td><div><b>'+(r.name||'-')+'</b></div>'+
+              '<div class="muted">'+(r.phone||'')+'</div>'+
+              '<div class="muted">'+(r.address||'')+'</div></td>',
+          '<td><div><b>'+(r.category||'-')+'</b></div>'+
+              '<div class="muted">'+(r.detail||'')+'</div></td>',
+          '<td>'+buildPhotoCell(r)+'</td>',
+          '<td>'+ (r.lat&&r.lng
+                    ? '<div>'+r.lat+', '+r.lng+'</div><a href="https://www.google.com/maps?q='+r.lat+','+r.lng+'" target="_blank">เปิดแผนที่</a>'
+                    : '-') +'</td>',
+          '<td><span class="pill s-'+(r.status||'รับเรื่องแล้ว')+'">'+(r.status||'รับเรื่องแล้ว')+'</span></td>',
+          '<td class="right"><div class="stack">'+
+              '<button data-id="'+r._id+'" data-next="กำลังดำเนินการ" class="btn btn-green">กำลังดำเนินการ</button>'+
+              '<button data-id="'+r._id+'" data-next="เสร็จสิ้น" class="btn btn-blue">เสร็จสิ้น</button>'+
+              '<button data-id="'+r._id+'" data-action="change-before" class="btn btn-lite">เปลี่ยนรูปก่อน</button>'+
+              '<button data-id="'+r._id+'" data-action="change-after"  class="btn btn-lite">เพิ่ม/เปลี่ยนรูปหลัง</button>'+
+          '</div></td>',
+        '</tr>'
+      ].join('');
+    }).join('');
+    elRows.innerHTML = rows || '<tr><td colspan="7" class="muted">ไม่พบข้อมูล</td></tr>';
+    relabelForMobile();
+  }
+
+  /* ========== RENDER DASHBOARD ========== */
+  function renderDashboard(){
+    const byStatus = { "รับเรื่องแล้ว":0, "กำลังดำเนินการ":0, "เสร็จสิ้น":0 };
+    const byCat = {};
+    cache.forEach(r=>{
+      const s = r.status || "รับเรื่องแล้ว";
+      byStatus[s] = (byStatus[s]||0)+1;
+      if(r.category) byCat[r.category] = (byCat[r.category]||0)+1;
+    });
+
+    kTotal.textContent   = cache.length;
+    kPending.textContent = byStatus["รับเรื่องแล้ว"]||0;
+    kProgress.textContent= byStatus["กำลังดำเนินการ"]||0;
+    kDone.textContent    = byStatus["เสร็จสิ้น"]||0;
+
+    statusChart?.destroy(); categoryChart?.destroy();
+
+    statusChart = new Chart($("statusChart"), {
+      type:"doughnut",
+      data:{ labels:["รับเรื่องแล้ว","กำลังดำเนินการ","เสร็จสิ้น"],
+             datasets:[{ data:[byStatus["รับเรื่องแล้ว"]||0, byStatus["กำลังดำเนินการ"]||0, byStatus["เสร็จสิ้น"]||0] }] }
+    });
+
+    categoryChart = new Chart($("categoryChart"), {
+      type:"bar",
+      data:{ labels:Object.keys(byCat), datasets:[{ data:Object.values(byCat) }] }
+    });
+
+    const latest = cache.slice().sort((a,b)=> (b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).slice(0,5);
+    latestRows.innerHTML = latest.map(r=>{
+      const dt = r.createdAt?.seconds ? new Date(r.createdAt.seconds*1000).toLocaleString("th-TH") : "";
+      return `<tr><td><strong>${r.title||r.detail||'-'}</strong></td><td>${r.category||''}</td><td>${r.status||'รับเรื่องแล้ว'}</td><td>${dt}</td></tr>`;
+    }).join('') || `<tr><td colspan="4" style="color:#6b7280">ไม่มีข้อมูล</td></tr>`;
+  }
+
+  btnDash?.addEventListener('click', ()=>{ dashBackdrop.style.display='flex'; renderDashboard() });
+  closeDash?.addEventListener('click', ()=>{ dashBackdrop.style.display='none' });
+
+  /* ========== PICK & UPLOAD IMAGE (Cloudinary unsigned) ========== */
+  function pickImageFile(){
+    return new Promise((resolve)=>{
+      const inp = document.createElement('input');
+      inp.type = 'file';
+      inp.accept = 'image/*';
+      inp.onchange = () => resolve(inp.files?.[0] || null);
+      inp.click();
+    });
+  }
+  async function uploadToCloudinary(file){
+    const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`;
+    const fd = new FormData();
+    fd.append('upload_preset', UPLOAD_PRESET);
+    fd.append('file', file);
+    const res = await fetch(url, { method:'POST', body: fd });
+    if(!res.ok) throw new Error('Upload failed');
+    const data = await res.json();
+    return data.secure_url;
+  }
+
+  /* ========== FIREBASE ========== */
+  async function startSubscribe(){
+    const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js');
+    const { getAuth, signInAnonymously } = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js');
+    const { getFirestore, collection, query, orderBy, onSnapshot, doc, updateDoc, serverTimestamp }
+      = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js');
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDR8hVqZ1uDrjRMjK6u_rWO6c7Cs5-vDXw",
+      authDomain: "abt-report.firebaseapp.com",
+      projectId: "abt-report",
+      storageBucket: "abt-report.appspot.com",
+      messagingSenderId: "166748459797",
+      appId: "1:166748459797:web:0cf5693e43a551142a8f1c"
+    };
+
+    const fb = initializeApp(firebaseConfig);
+    const auth = getAuth(fb);
+    const db = getFirestore(fb);
+    await signInAnonymously(auth);
+
+    if (unsubscribe) unsubscribe();
+    const qReports = query(collection(db,'reports'), orderBy('createdAt','desc'));
+    unsubscribe = onSnapshot(qReports, snap=>{
+      cache = snap.docs.map(d=>({_id:d.id, ...d.data()}));
+      renderTable();
+      if (dashBackdrop.style.display==='flex') renderDashboard();
+    });
+
+    // คลิกปุ่มในตาราง
+    elRows.addEventListener('click', async (e)=>{
+      const btn = e.target.closest('button');
+      if(!btn) return;
+
+      // เปลี่ยนสถานะ
+      if (btn.dataset.id && btn.dataset.next){
+        try{
+          await updateDoc(doc(db,'reports',btn.dataset.id), { status:btn.dataset.next, updatedAt:serverTimestamp() });
+        }catch(err){ alert('อัปเดตไม่สำเร็จ: '+err.message) }
+        return;
+      }
+
+      // เปลี่ยนรูปก่อน
+      if (btn.dataset.action === 'change-before'){
+        try{
+          const file = await pickImageFile(); if(!file) return;
+          const newUrl = await uploadToCloudinary(file);
+          await updateDoc(doc(db,'reports', btn.dataset.id), { photo:newUrl, updatedAt:serverTimestamp() });
+          alert('เปลี่ยนรูป (ก่อน) เรียบร้อย ✅');
+        }catch(err){ console.error(err); alert('อัปโหลดไม่สำเร็จ') }
+        return;
+      }
+
+      // เพิ่ม/เปลี่ยนรูปหลัง
+      if (btn.dataset.action === 'change-after'){
+        try{
+          const file = await pickImageFile(); if(!file) return;
+          const newUrl = await uploadToCloudinary(file);
+          await updateDoc(doc(db,'reports', btn.dataset.id), { photoAfter:newUrl, updatedAt:serverTimestamp() });
+          alert('อัปเดตรูป (หลัง) เรียบร้อย ✅');
+        }catch(err){ console.error(err); alert('อัปโหลดไม่สำเร็จ') }
+        return;
+      }
+    });
+  }
+
+  /* ========== MOBILE LABELS ========== */
+  function relabelForMobile(){
+    const headers = Array.from(document.querySelectorAll('thead th')).map(th => th.textContent.trim());
+    Array.from(elRows.querySelectorAll('tr')).forEach(tr=>{
+      Array.from(tr.children).forEach((td,i)=>{
+        if(!td.hasAttribute('data-label') && headers[i]) td.setAttribute('data-label', headers[i]);
+        const img = td.querySelector('img'); if(img && !img.classList.contains('thumb')) img.classList.add('thumb');
+      });
+    });
+  }
+
+  /* ========== BOOTSTRAP ========== */
+  if (localStorage.getItem(KEY)==='1'){ showApp(); startSubscribe().catch(console.error) }
+  else{ showGate() }
+
+  pinForm.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    if ((elPin.value||'').trim() === ADMIN_PIN){
+      localStorage.setItem(KEY,'1'); elPin.value=''; showApp(); startSubscribe().catch(alert);
+    }else{ alert('PIN ไม่ถูกต้อง'); elPin.select() }
+  });
+
+  document.getElementById('btnLogout')?.addEventListener('click', ()=>{
+    localStorage.removeItem(KEY);
+    dashBackdrop.style.display='none';
+    if (unsubscribe){ unsubscribe(); unsubscribe=null }
+    elRows.innerHTML = '<tr><td colspan="7" class="muted">ออกจากระบบแล้ว</td></tr>';
+    showGate();
+  });
+
+  elQ?.addEventListener('input', renderTable);
+  elStatus?.addEventListener('change', renderTable);
+  elRefresh?.addEventListener('click', renderTable);
+</script>
+</body>
+</html>
