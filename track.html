@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ตรวจสอบสถานะ | ABT Report</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  body{font-family:'Kanit',sans-serif;margin:0;background:url('Backgroundธีม.png') center/cover no-repeat fixed}
+  #btnBack{position:fixed;top:20px;left:20px;background:#16a34a;color:#fff;border:0;padding:10px 16px;border-radius:8px;box-shadow:0 4px 10px rgba(0,0,0,.15);cursor:pointer}
+  .wrap{max-width:720px;margin:120px auto;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-radius:16px;padding:20px}
+  h2{ text-align:center; font-weight:700; font-size:26px; margin:0 0 20px; color:#0f172a }
+  .row{display:flex;gap:10px}
+  input{flex:1;padding:10px;border-radius:8px;border:1px solid #ccc}
+  button{padding:10px 16px;border:0;border-radius:8px;background:#16a34a;color:#fff;cursor:pointer}
+
+  .item{display:flex;gap:14px;align-items:flex-start;background:rgba(255,255,255,.98);margin:12px 0;padding:12px;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.10)}
+  .thumb{width:120px;height:90px;object-fit:cover;border-radius:10px;box-shadow:0 3px 10px rgba(0,0,0,.15)}
+  .text{flex:1;min-width:0}
+  .muted{color:#64748b}
+  .pill{padding:3px 8px;border-radius:10px;font-size:12px}
+  .s-รับเรื่องแล้ว{background:#e0f2fe;color:#0369a1}
+  .s-กำลังดำเนินการ{background:#fef9c3;color:#854d0e}
+  .s-เสร็จสิ้น{background:#dcfce7;color:#166534}
+  .warn-text{color:#dc2626;font-weight:700;margin:6px 0 10px}
+  .blue{color:#0b3aa5}
+
+  /* คอลัมน์ซ้ายให้รูปอยู่กลางพอดี */
+  .item .left{width:260px;min-height:100px;display:flex;align-items:center;justify-content:center}
+  .photos{display:flex;justify-content:center;align-items:center;gap:12px;flex-wrap:wrap}
+  .ph{position:relative;display:inline-block}
+  .ph .tag{position:absolute;left:6px;bottom:6px;font-size:11px;line-height:1;padding:4px 6px;border-radius:8px;color:#fff;background:rgba(0,0,0,.55);backdrop-filter:blur(4px)}
+
+  /* ที่ว่าง “รอรูปหลัง” */
+  .thumb.placeholder{display:flex;align-items:center;justify-content:center;background:#eef6ff;color:#3b82f6;border:1px dashed #93c5fd}
+
+  /* มือถือ */
+  @media (max-width:680px){
+    .wrap{margin:90px 12px}
+    .item{flex-direction:column}
+    .item .left{width:100%}
+    .thumb{width:46vw;max-width:180px;height:auto;aspect-ratio:4/3}
+  }
+</style>
+</head>
+<body>
+<button id="btnBack">⬅️ ย้อนกลับ</button>
+
+<div class="wrap">
+  <h2>🔍 ตรวจสอบสถานะของผู้แจ้งปัญหา</h2>
+  <div class="warn-text">**โปรดตรวจสอบเบอร์โทรก่อนกดค้นหา**</div>
+
+  <div class="row">
+    <input id="q" placeholder="กรอกเบอร์โทร หรือ 4 ตัวท้าย">
+    <button id="btnSearch">ค้นหา</button>
+  </div>
+
+  <div id="result" style="margin-top:10px"></div>
+</div>
+
+<!-- ใช้ compat SDK เพื่อให้รันบน file:// ได้ -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
+<script>
+  // ===== Firebase =====
+  const firebaseConfig = {
+    apiKey: "AIzaSyDR8hVqZ1uDrjRMjK6u_rWO6c7Cs5-vDXw",
+    authDomain: "abt-report.firebaseapp.com",
+    projectId: "abt-report",
+    storageBucket: "abt-report.appspot.com",
+    messagingSenderId: "166748459797",
+    appId: "1:166748459797:web:0cf5693e43a551142a8f1c"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  firebase.auth().signInAnonymously();
+
+  // ===== UI =====
+  const resBox = document.getElementById('result');
+  document.getElementById('btnBack').onclick = () => history.length>1 ? history.back() : (location='index.html');
+
+  const fmt = t => (t && typeof t.toDate==='function')
+    ? t.toDate().toLocaleString('th-TH',{year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'})
+    : '-';
+
+  async function search(){
+    const q = document.getElementById('q').value.trim().replace(/\D/g,'');
+    if(!q){ alert('โปรดกรอกเบอร์โทร'); return; }
+
+    resBox.innerHTML = '<div class="muted">กำลังค้นหา...</div>';
+    try{
+      let list=[];
+      if(q.length>=9){
+        const snap = await db.collection('reports')
+          .where('phone','==',q).orderBy('createdAt','desc').limit(50).get();
+        list = snap.docs.map(d=>d.data());
+      }else{
+        const snap = await db.collection('reports')
+          .orderBy('createdAt','desc').limit(80).get();
+        list = snap.docs.map(d=>d.data()).filter(r=>(r.phone||'').endsWith(q));
+      }
+      if(!list.length){ resBox.innerHTML='<div class="muted">ไม่พบข้อมูล</div>'; return; }
+
+      resBox.innerHTML = list.map(r => (
+        '<div class="item">'
+          + '<div class="left"><div class="photos">'
+              + (r.photo
+                  ? '<a href="'+r.photo+'" target="_blank" rel="noopener" class="ph">'
+                      + '<img class="thumb" loading="lazy" src="'+r.photo+'" alt="ก่อน"><span class="tag">ก่อน</span>'
+                    + '</a>'
+                  : '<div class="thumb placeholder">ไม่มีรูป</div>')
+              + (r.photoAfter
+                  ? '<a href="'+r.photoAfter+'" target="_blank" rel="noopener" class="ph">'
+                      + '<img class="thumb" loading="lazy" src="'+r.photoAfter+'" alt="หลัง"><span class="tag">หลัง</span>'
+                    + '</a>'
+                  : (r.status==='เสร็จสิ้น'
+                      ? '<div class="thumb placeholder">รอรูปหลัง</div>'
+                      : '')
+                )
+            + '</div></div>'
+          + '<div class="text">'
+              + '<div class="muted" style="font-size:13px;margin-bottom:4px;">🕒 '+fmt(r.createdAt)+'</div>'
+              + '<div><b>ผู้แจ้ง:</b> <span class="blue">'+(r.name||'-')+'</span></div>'
+              + (r.phone ? '<div><b>เบอร์โทร:</b> <span class="blue">'+r.phone+'</span></div>' : '')
+              + '<b>ประเภท:</b> <span class="blue">'+(r.category||'-')+'</span><br>'
+              + '<b>รายละเอียด:</b> <span class="blue">'+(r.detail||'-')+'</span><br>'
+              + '<b>สถานะ:</b> <span class="blue"><span class="pill s-'+(r.status||'รับเรื่องแล้ว')+'">'+(r.status||'รับเรื่องแล้ว')+'</span></span><br>'
+              + (r.lat ? '<div class="muted">พิกัด: '+r.lat+', '+r.lng+' · <a href="https://maps.google.com/?q='+r.lat+','+r.lng+'" target="_blank">เปิดแผนที่</a></div>' : '')
+            + '</div>'
+        + '</div>'
+      )).join('');
+    }catch(e){
+      console.error(e);
+      resBox.innerHTML='<div class="muted">เกิดข้อผิดพลาด: '+e.message+'</div>';
+    }
+  }
+
+  document.getElementById('btnSearch').onclick = search;
+  document.getElementById('q').onkeydown = e => { if(e.key==='Enter') search(); };
+</script>
+</body>
+</html>

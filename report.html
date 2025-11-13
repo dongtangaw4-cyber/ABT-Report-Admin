@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>แจ้งปัญหาใหม่ | ABT Report</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#16a34a">
+  <link rel="icon" href="icon192.png">
+  <link rel="apple-touch-icon" href="icon512.png">
+
+  <!-- ฟอนต์ Kanit -->
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:'Kanit',system-ui;background:url('Backgroundธีม.png') center/cover no-repeat fixed}
+    body{display:flex;justify-content:center;align-items:flex-start;padding-top:clamp(30px,6vh,70px)}
+    .container{width:95%;max-width:850px;margin:0 auto;padding:0 16px}
+    header{text-align:center;margin-bottom:20px}
+    header h1{display:inline-block;font-size:36px;font-weight:700;color:#fff;padding:12px 36px;border-radius:50px;background:linear-gradient(135deg,#16a34a 0%,#22c55e 100%);box-shadow:0 4px 10px rgba(0,0,0,.2);letter-spacing:.5px}
+    .app-card{background:rgba(255,255,255,.96);border-radius:20px;padding:40px 36px;box-shadow:0 8px 30px rgba(0,0,0,.15)}
+    label{display:block;margin:10px 0 4px;font-weight:500;color:#333}
+    input,select,textarea{width:100%;padding:12px;border:2px solid #b0b0b0;border-radius:12px;font-size:16px;background:#ffffffcc;transition:all .25s}
+    input:focus,select:focus,textarea:focus{border-color:#16a34a;box-shadow:0 0 8px #16a34a80;outline:none;background:#fff}
+    textarea{min-height:100px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+    .btn,.btn-secondary{width:100%;border:0;border-radius:12px;padding:14px 16px;cursor:pointer;font-size:18px;font-weight:700;transition:.2s;font-family:'Kanit',system-ui}
+    .btn{background:#16a34a;color:#fff}.btn:hover{background:#15803d}
+    .btn-secondary{background:#0ea5e9;color:#fff}.btn-secondary:hover{background:#0284c7}
+    #preview{display:none;max-width:100%;border-radius:8px;margin-top:8px}
+    @media (max-width:900px){
+      .row{grid-template-columns:1fr}
+      header h1{font-size:26px;padding:10px 24px}
+      body{align-items:flex-start;padding-top:20px}
+    }
+  </style>
+</head>
+<body>
+
+<button onclick="window.history.back()" style="position:fixed;top:20px;left:20px;background:#16a34a;color:#fff;border:0;padding:10px 16px;border-radius:8px;cursor:pointer;font-family:'Kanit',sans-serif;box-shadow:0 4px 10px rgba(0,0,0,.15)">⬅️ ย้อนกลับ</button>
+
+<div class="container">
+  <header><h1>แจ้งปัญหาใหม่</h1></header>
+
+  <div class="app-card">
+    <form id="reportForm" autocomplete="off">
+      <label>ชื่อ-นามสกุลของผู้แจ้ง</label>
+      <input type="text" name="name" placeholder="กรอกชื่อจริง - นามสกุลของผู้แจ้ง" required>
+
+      <label>ที่อยู่</label>
+      <input name="address" placeholder="กรอกที่อยู่ปัจจุบัน" required>
+
+      <label>เบอร์ติดต่อ</label>
+      <input name="phone" type="tel" inputmode="tel" required pattern="0[0-9]{8,9}" maxlength="10"
+             placeholder="กรอกเบอร์โทร (เช่น 0812345678)"
+             title="กรุณากรอกเบอร์โทร 9–10 หลัก และต้องขึ้นต้นด้วย 0">
+
+      <label>ประเภทปัญหา</label>
+      <select name="category" required>
+        <option value="">— เลือก —</option>
+        <option>ถนนชำรุด</option>
+        <option>ไฟฟ้าสาธารณะ</option>
+        <option>น้ำประปา</option>
+        <option>น้ำท่วม</option>
+        <option>อันตรายจากสัตว์</option>
+        <option>ร้องทุกข์อื่นๆ</option>
+      </select>
+
+      <label>แนบรูปถ่าย <small>**(จำเป็น)**</small></label>
+      <input type="file" id="photo" accept="image/*" required>
+      <img id="preview" alt="ตัวอย่างรูป">
+
+      <label>รายละเอียดเพิ่มเติม</label>
+      <textarea name="detail" placeholder="โปรดกรอกข้อมูล"></textarea>
+
+      <div class="row">
+        <div>
+          <label>พิกัดละติจูด</label>
+          <input id="lat" name="lat" placeholder="กรอกพิกัดละติจูด เช่น 14.56789">
+        </div>
+        <div>
+          <label>ลองติจูด</label>
+          <input id="lng" name="lng" placeholder="กรอกพิกัดลองติจูด เช่น 100.123456">
+        </div>
+      </div>
+
+      <button type="button" id="btnLocate" class="btn-secondary" style="margin-top:16px">📍 ระบุตำแหน่งอัตโนมัติ</button>
+      <button type="submit" class="btn" style="margin-top:12px">🎉 ส่งเรื่อง 🎉</button>
+      <p id="result" style="text-align:center;font-weight:600;margin-top:10px"></p>
+    </form>
+  </div>
+</div>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(()=>{});
+  }
+</script>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+  import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+  // Firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyDR8hVqZ1uDrjRMjK6u_rWO6c7Cs5-vDXw",
+    authDomain: "abt-report.firebaseapp.com",
+    projectId: "abt-report",
+    storageBucket: "abt-report.appspot.com",
+    messagingSenderId: "166748459797",
+    appId: "1:166748459797:web:0cf5693e43a551142a8f1c"
+  };
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  await signInAnonymously(auth);
+
+  // Cloudinary
+  const CLOUD_NAME = 'dm7cggzov';
+  const UPLOAD_PRESET = 'abt-report-imge';
+  async function uploadToCloudinary(file){
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('upload_preset', UPLOAD_PRESET);
+    const r = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`, { method:'POST', body:fd });
+    const j = await r.json();
+    if (!r.ok || !j.secure_url) throw new Error(j.error?.message || 'อัปโหลดรูปไม่สำเร็จ');
+    return j.secure_url;
+  }
+
+  // DOM
+  const form       = document.getElementById('reportForm');
+  const resEl      = document.getElementById('result');
+  const btnLocate  = document.getElementById('btnLocate');
+  const latEl      = document.getElementById('lat');
+  const lngEl      = document.getElementById('lng');
+  const photoInput = document.getElementById('photo');
+  const previewImg = document.getElementById('preview');
+
+  // ระบุตำแหน่ง
+  btnLocate.addEventListener('click', () => {
+    if (!navigator.geolocation) return alert('อุปกรณ์ไม่รองรับการระบุตำแหน่ง');
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        latEl.value = pos.coords.latitude.toFixed(6);
+        lngEl.value = pos.coords.longitude.toFixed(6);
+      },
+      () => alert('ไม่สามารถระบุตำแหน่งได้')
+    );
+  });
+
+  // พรีวิวรูป
+  let objectUrl;
+  photoInput.addEventListener('change', () => {
+    const file = photoInput.files?.[0];
+    previewImg.style.display = 'none';
+    previewImg.removeAttribute('src');
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('กรุณาเลือกไฟล์รูปภาพเท่านั้น');
+      photoInput.value = '';
+      return;
+    }
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(file);
+    previewImg.src = objectUrl;
+    previewImg.style.display = 'block';
+  });
+
+  // ส่งฟอร์ม
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    resEl.textContent = 'กำลังส่งข้อมูล...';
+
+    try{
+      // 1) ดึงข้อมูลจากฟอร์ม
+      const fd   = new FormData(form);
+      const data = Object.fromEntries(fd.entries());
+
+      // 2) ทำความสะอาด + ตรวจเบอร์โทร (ก่อนอัปโหลด/บันทึก)
+      data.phone = (data.phone || '').replace(/\D/g,'');   // เก็บเฉพาะตัวเลข
+      if (!/^0\d{8,9}$/.test(data.phone)) {
+        resEl.textContent = '';
+        alert('กรุณากรอกเบอร์โทรให้ถูกต้อง: 9–10 หลัก และต้องขึ้นต้นด้วย 0');
+        return;
+      }
+
+      // 3) ตรวจรูป + อัปโหลด
+      const file = photoInput.files?.[0];
+      if (!file) throw new Error('กรุณาแนบรูปภาพ!');
+      const photoUrl = await uploadToCloudinary(file);
+
+      // 4) บันทึกลง Firestore
+      await addDoc(collection(db,'reports'), {
+        ...data,
+        photo: photoUrl,
+        createdAt: serverTimestamp(),
+        status: 'รับเรื่องแล้ว'
+      });
+
+      // 5) เคลียร์ฟอร์ม
+      resEl.textContent = '✅ ส่งข้อมูลสำเร็จแล้ว!';
+      form.reset();
+      if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
+      previewImg.style.display = 'none';
+      previewImg.removeAttribute('src');
+    }catch(err){
+      resEl.textContent = '❌ เกิดข้อผิดพลาด: ' + err.message;
+      console.error(err);
+    }
+  });
+</script>
+</body>
+</html>

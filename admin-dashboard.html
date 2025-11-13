@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ABT Report • Admin Dashboard</title>
+
+<style>
+  body{margin:0; font-family:'Kanit', sans-serif; background:url('backgroundธีม.png'); center/cover fixed;}
+  .wrap{padding:20px; max-width:1100px; margin:auto;}
+  .card{
+    background:#fff; border-radius:14px; padding:16px;
+    border:1px solid #ddd;
+  }
+  .grid{display:grid; gap:14px;}
+  @media(min-width:700px){
+    .grid-4{grid-template-columns:repeat(4,1fr);}
+    .grid-2{grid-template-columns:repeat(2,1fr);}
+  }
+  .kpi-title{font-size:13px; color:#6b7280; margin-bottom:4px}
+  .kpi-number{font-size:30px; font-weight:700; margin:0}
+
+  table{width:100%; border-collapse:separate; border-spacing:0 10px}
+  thead th{font-size:13px; color:#6b7280; text-align:left; padding:0 8px}
+  tbody tr{background:#fff; border:1px solid #e5e7eb; border-radius:12px}
+  tbody td{padding:10px 8px; font-size:14px}
+  tbody tr td:first-child{border-top-left-radius:12px; border-bottom-left-radius:12px}
+  tbody tr td:last-child{border-top-right-radius:12px; border-bottom-right-radius:12px}
+
+  /* ปุ่มกลับไปหน้าแอดมิน (fixed เห็นชัวร์) */
+  .btn-back{
+    position:fixed; top:14px; right:14px; z-index:2147483647;
+    padding:10px 16px; background:#0a4cff; color:#fff; border-radius:10px;
+    font-weight:700; text-decoration:none; box-shadow:0 3px 10px rgba(0,0,0,.15);
+  }
+</style>
+</head>
+
+<body>
+
+<!-- ปุ่มกลับหน้าแอดมิน -->
+<a class="btn-back" href="admin.html?v=2">เข้าสู่ระบบแอดมิน/Admin</a>
+
+<h2 style="padding:18px; margin:0;">ABT Report • Admin Dashboard</h2>
+
+<div class="wrap">
+
+  <!-- KPI -->
+  <div class="grid grid-4">
+    <div class="card"><div class="kpi-title">ทั้งหมด</div><p id="kTotal" class="kpi-number">0</p></div>
+    <div class="card"><div class="kpi-title">รอดำเนินการ</div><p id="kPending" class="kpi-number">0</p></div>
+    <div class="card"><div class="kpi-title">กำลังตรวจสอบ</div><p id="kProgress" class="kpi-number">0</p></div>
+    <div class="card"><div class="kpi-title">เสร็จสิ้น</div><p id="kDone" class="kpi-number">0</p></div>
+  </div>
+
+  <!-- Charts -->
+  <div class="grid grid-2" style="margin-top:14px">
+    <div class="card">
+      <div class="kpi-title">สรุปตามสถานะ</div>
+      <canvas id="statusChart" height="160"></canvas>
+    </div>
+    <div class="card">
+      <div class="kpi-title">สรุปตามประเภท</div>
+      <canvas id="categoryChart" height="160"></canvas>
+    </div>
+  </div>
+
+  <!-- ตัวอย่างตาราง (ถ้าจะโชว์รายการล่าสุดสั้นๆ) -->
+  <div class="card" style="margin-top:14px">
+    <div class="kpi-title">รายการล่าสุด (5 รายการ)</div>
+    <table>
+      <thead>
+        <tr>
+          <th>หัวข้อ</th>
+          <th>ประเภท</th>
+          <th>สถานะ</th>
+          <th>วันที่</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Firebase + Dashboard Logic -->
+<script type="module">
+  // ===== Firebase =====
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, collection, query, orderBy, onSnapshot, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDR8hVqZ1uDrjRMjK6u_rWO6c7Cs5-vDXw",
+    authDomain: "abt-report.firebaseapp.com",
+    projectId: "abt-report",
+    storageBucket: "abt-report.appspot.com",
+    messagingSenderId: "107684459797",
+    appId: "1:166784459797:web:0c5e693e43a551142a8f1c"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // ===== DOM =====
+  const $ = id => document.getElementById(id);
+  const kTotal = $("kTotal");
+  const kPending = $("kPending");
+  const kProgress = $("kProgress");
+  const kDone = $("kDone");
+  const rows = $("rows");
+
+  // ===== Charts =====
+  let statusChart, categoryChart;
+
+  function drawCharts(list){
+    const byStatus = { pending:0, in_progress:0, done:0 };
+    const byCat = {};
+    list.forEach(r=>{
+      byStatus[r.status] = (byStatus[r.status]||0)+1;
+      byCat[r.category] = (byCat[r.category]||0)+1;
+    });
+
+    // KPI
+    kTotal.textContent   = list.length;
+    kPending.textContent = byStatus.pending||0;
+    kProgress.textContent= byStatus.in_progress||0;
+    kDone.textContent    = byStatus.done||0;
+
+    // Destroy old
+    statusChart?.destroy();
+    categoryChart?.destroy();
+
+    // Status doughnut
+    statusChart = new Chart($("statusChart"), {
+      type:"doughnut",
+      data:{
+        labels:["รอดำเนินการ","กำลังตรวจสอบ","เสร็จสิ้น"],
+        datasets:[{ data:[byStatus.pending||0, byStatus.in_progress||0, byStatus.done||0] }]
+      }
+    });
+
+    // Category bar
+    categoryChart = new Chart($("categoryChart"), {
+      type:"bar",
+      data:{
+        labels:Object.keys(byCat),
+        datasets:[{ data:Object.values(byCat) }]
+      }
+    });
+  }
+
+  function renderLatest(list){
+    const html = list.slice(0,5).map(r=>{
+      const dt = r.createdAt?.seconds ? new Date(r.createdAt.seconds*1000).toLocaleString("th-TH") : "";
+      const st = r.status==="done" ? "เสร็จสิ้น" : (r.status==="in_progress" ? "กำลังตรวจสอบ" : "รอดำเนินการ");
+      return `<tr>
+        <td><strong>${r.title||""}</strong></td>
+        <td>${r.category||""}</td>
+        <td>${st}</td>
+        <td>${dt}</td>
+      </tr>`;
+    }).join("");
+    rows.innerHTML = html || `<tr><td colspan="4" style="color:#6b7280">ไม่มีข้อมูล</td></tr>`;
+  }
+
+  // ===== Firestore realtime =====
+  const qAll = query(collection(db,"reports"), orderBy("createdAt","desc"));
+  onSnapshot(qAll, snap=>{
+    const data = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+    drawCharts(data);
+    renderLatest(data);
+  });
+
+</script>
+<script>
+  if(sessionStorage.getItem('abt_admin') !== 'ok'){
+    location.replace('admin-login.html');
+  }
+</script>
+</body>
+</html>
